@@ -107,7 +107,7 @@ object UploadServiceConfig {
      * running uploads
      */
     @JvmStatic
-    var notificationActionsObserverFactory: (UploadService) -> NotificationActionsObserver = {
+    var notificationActionsObserverFactory: (Context) -> NotificationActionsObserver = {
         NotificationActionsObserver(it)
     }
 
@@ -116,8 +116,8 @@ object UploadServiceConfig {
      * The default notification handler creates a notification for each upload task.
      */
     @JvmStatic
-    var notificationHandlerFactory: (UploadService) -> UploadTaskObserver = { uploadService ->
-        NotificationHandler(uploadService)
+    var notificationHandlerFactoryWorker: (UploadWorker) -> UploadTaskObserver = { uploadWorker ->
+        NotificationHandler(worker = uploadWorker)
     }
 
     /**

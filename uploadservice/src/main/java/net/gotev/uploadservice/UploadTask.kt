@@ -11,7 +11,9 @@ import net.gotev.uploadservice.logger.UploadServiceLogger
 import net.gotev.uploadservice.network.HttpStack
 import net.gotev.uploadservice.network.ServerResponse
 import net.gotev.uploadservice.observer.task.UploadTaskObserver
+import java.io.FileNotFoundException
 import java.io.IOException
+import java.net.UnknownHostException
 import java.util.ArrayList
 import java.util.Date
 
@@ -31,7 +33,7 @@ abstract class UploadTask : Runnable {
     /**
      * Flag indicating if the operation should continue or is cancelled. You should never
      * explicitly set this value in your subclasses, as it's written by the Upload Service
-     * when you call [UploadService.stopUpload]. If this value is false, you should
+     * when you call [stopUpload]. If this value is false, you should
      * terminate your upload task as soon as possible, so be sure to check the status when
      * performing long running operations such as data transfer. As a rule of thumb, check this
      * value at every step of the upload protocol you are implementing, and after that each chunk
@@ -150,16 +152,17 @@ abstract class UploadTask : Runnable {
                 } else if (attempts >= params.maxRetries) {
                     onError(exc)
                 } else {
-                    UploadServiceLogger.error(TAG, params.id, exc) { "error on attempt ${attempts + 1}. Waiting ${errorDelay}s before next attempt." }
+                    if (exc is FileNotFoundException) {
+                        UploadServiceLogger.error(TAG, params.id, exc) { "error on attempt ${attempts + 1}. Since the file was already deleted, we won't retry." }
+                        break
+                    } else if (exc is UnknownHostException) {
+                        UploadServiceLogger.error(TAG, params.id, exc) { "error. Since the host can't be reached, we won't count this retry." }
+                        attempts--
+                        sleepBeforeRetry()
+                    } else {
+                        UploadServiceLogger.error(TAG, params.id, exc) { "error on attempt ${attempts + 1}. Waiting ${errorDelay}s before next attempt." }
 
-                    val sleepDeadline = System.currentTimeMillis() + errorDelay * 1000
-
-                    sleepWhile { shouldContinue && System.currentTimeMillis() < sleepDeadline }
-
-                    errorDelay *= UploadServiceConfig.retryPolicy.multiplier.toLong()
-
-                    if (errorDelay > UploadServiceConfig.retryPolicy.maxWaitTimeSeconds) {
-                        errorDelay = UploadServiceConfig.retryPolicy.maxWaitTimeSeconds.toLong()
+                        sleepBeforeRetry()
                     }
                 }
             }
@@ -169,6 +172,18 @@ abstract class UploadTask : Runnable {
 
         if (!shouldContinue) {
             onUserCancelledUpload()
+        }
+    }
+
+    private fun sleepBeforeRetry() {
+        val sleepDeadline = System.currentTimeMillis() + errorDelay * 1000
+
+        sleepWhile { shouldContinue && System.currentTimeMillis() < sleepDeadline }
+
+        errorDelay *= UploadServiceConfig.retryPolicy.multiplier.toLong()
+
+        if (errorDelay > UploadServiceConfig.retryPolicy.maxWaitTimeSeconds) {
+            errorDelay = UploadServiceConfig.retryPolicy.maxWaitTimeSeconds.toLong()
         }
     }
 
@@ -199,7 +214,7 @@ abstract class UploadTask : Runnable {
     }
 
     /**
-     * Broadcasts a completion status update and informs the [UploadService] that the task
+     * Broadcasts a completion status update and informs that the task
      * executes successfully.
      * Call this when the task has completed the upload request and has received the response
      * from the server.

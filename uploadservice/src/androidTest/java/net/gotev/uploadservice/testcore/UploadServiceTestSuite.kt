@@ -2,8 +2,8 @@ package net.gotev.uploadservice.testcore
 
 import android.app.Application
 import androidx.test.platform.app.InstrumentationRegistry
-import net.gotev.uploadservice.UploadService
 import net.gotev.uploadservice.UploadServiceConfig
+import net.gotev.uploadservice.UploadWorker
 import org.junit.After
 import org.junit.Before
 
@@ -24,6 +24,6 @@ open class UploadServiceTestSuite {
     fun teardown() {
         mockWebServer.shutdown()
         appContext.deleteTestNotificationChannel()
-        UploadService.stop(appContext, true)
+        UploadWorker.stop(appContext, true)
     }
 }

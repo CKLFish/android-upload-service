@@ -1,11 +1,11 @@
 package net.gotev.uploadservice.observer.task
 
-import net.gotev.uploadservice.UploadService
+import net.gotev.uploadservice.UploadWorker
 import net.gotev.uploadservice.data.UploadInfo
 import net.gotev.uploadservice.data.UploadNotificationConfig
 import net.gotev.uploadservice.network.ServerResponse
 
-class TaskCompletionNotifier(private val service: UploadService) : UploadTaskObserver {
+class TaskCompletionNotifier(private val worker: UploadWorker? = null) : UploadTaskObserver {
     override fun onStart(
         info: UploadInfo,
         notificationId: Int,
@@ -41,6 +41,6 @@ class TaskCompletionNotifier(private val service: UploadService) : UploadTaskObs
         notificationId: Int,
         notificationConfig: UploadNotificationConfig
     ) {
-        service.taskCompleted(info.uploadId)
+        worker?.taskCompleted(info.uploadId)
     }
 }
